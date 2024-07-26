@@ -2,13 +2,19 @@ import glob
 import re
 import os, sys
 from . import app, db
+from sqlalchemy_views import CreateView, DropView
 from .dbmodel import Coder, Codes, Posts, Profiles
-from flask import render_template, redirect, url_for, flash, session, send_from_directory
+from flask import render_template, redirect, url_for, session, request, flash
 from flask_login import login_user, current_user, logout_user, login_required
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, HiddenField, RadioField
 from wtforms.validators import InputRequired, DataRequired
+from collections import deque
+from sqlalchemy.exc import NoResultFound
 
+def shorten_number(number_to_shorten):
+            from numerize import numerize 
+            return str(numerize.numerize(number_to_shorten))
 
 # Forms
 class LoginForm(FlaskForm):
@@ -17,14 +23,11 @@ class LoginForm(FlaskForm):
 
 class CategorizationForm(FlaskForm):
     post_id = HiddenField('Post ID', validators=[DataRequired()])
-    number_of_panels = RadioField('Number of Panels', choices=[(0, '0'), (1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, '6'), (7, 'More than 6')], validators=[DataRequired()])
-    type_of_image = RadioField('Type of Image', choices=[(1, 'Photo'), (2, 'Screenshot'), (3, 'Illustration')], validators=[DataRequired()])
-    type_of_movement = RadioField('Type of Movement', choices=[(1, 'None'), (2, 'Physical'), (3, 'Causal'), (4, 'Emotional'), (5, 'Physical and Causal'), (6, 'Physical, Causal and Emotional')], validators=[DataRequired()])
-    type_of_attribute = RadioField('Type of Attribute', choices=[(1, 'Character'), (2, 'Object'), (3, 'Creature'), (4, 'Scene'), (5, 'Screenshot')], validators=[DataRequired()])
-    type_of_emotions = RadioField('Type of Emotions', choices=[(1, 'Positive'), (2, 'Neutral'), (3, 'Negative')], validators=[DataRequired()])
-    type_of_subject = RadioField('Type of Subject', choices=[(1, 'Character'), (2, 'Object'), (3, 'Creature'), (4, 'Scene')], validators=[DataRequired()])
-    text_existence = RadioField('Text Existence', choices=[(1, 'Yes'), (2, 'No')], validators=[DataRequired()])
-    type_of_audience = RadioField('Type of Audience', choices=[(1, 'General'), (2, 'Specific')], validators=[DataRequired()])
+    number_of_memes = RadioField('Number of Memes', choices=[(0, 'None'), (1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5'), (6, 'More than 5')], coerce=int, validators=[InputRequired()])
+    type_of_memes = RadioField('Type of Memes', choices=[(0, 'None'), (1, 'Textual'), (2, 'Visual'), (3, 'Auditory'), (4, 'Textual and Visual'), (5, 'Visual and Auditory'), (6, 'Textual and Auditory'), (7, 'Textual, Visual and Auditory')], coerce=int, validators=[InputRequired()])
+    type_of_movement = RadioField('Type of Movement', choices=[(1, 'None'), (2, 'Physical'), (3, 'Causal'), (4, 'Emotional'), (5, 'Physical and causal'), (6, 'Physical and emotional'), (7, 'Physical, causal and emotional')], coerce=int, validators=[InputRequired()])
+    type_of_emotions = RadioField('Type of Emotions', choices=[(1, 'Positive'), (2, 'Neutral'), (3, 'Negative')], coerce=int, validators=[InputRequired()])
+    type_of_subject = RadioField('Type of Subject', choices=[(1, 'Character'), (2, 'Object'), (3, 'Creature'), (4, 'Scene')], coerce=int, validators=[InputRequired()])
     submit = SubmitField('Next')
 
 @app.route('/')
@@ -36,6 +39,7 @@ def home():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
+
         return redirect(url_for('dashboard'))
     form = LoginForm()
     if form.validate_on_submit():
@@ -44,6 +48,10 @@ def login():
         if coder:
             print("[+] Logged in successfully, user: " + str(form.username.data), file=sys.stderr)
             login_user(coder)
+            print(f'\n =========== [!] Relogging-in. All variables are reset. =========== ')
+            session['current_post_id'] = Posts.query.order_by(db.func.rand()).first().id
+            session['previous_posts'] = deque([], maxlen=25)
+            session['next_posts'] =  deque([], maxlen=25)            
             return redirect(url_for('dashboard'))
         # flash('Email atau Password salah, mohon periksa ulang!', 'danger')
     print("[-] Login failed " + str(form.username.data), file=sys.stderr)
@@ -53,109 +61,214 @@ def login():
 @login_required
 def dashboard():
     form = CategorizationForm()
-    if form.validate_on_submit():
+    print(f'\n[+] Previously = {session["previous_posts"]} ', file=sys.stderr)
+    print(f'\n[+] Next = {session["next_posts"]}', file=sys.stderr)
+
+    def fill_form(code):
+        """
+        Fill in the forms in the dashboard
+
+        :return: None/ True if done
+        """ 
+        form.number_of_memes.data = code.number_of_memes
+        form.type_of_memes.data = code.type_of_memes
+        form.type_of_movement.data = code.type_of_movement
+        form.type_of_emotions.data = code.type_of_emotions
+        form.type_of_subject.data = code.type_of_subject
+        
+    def empty_form():
+        """
+        Fill in the forms in the dashboard
+
+        :return: None/ True if done
+        """ 
+        form.number_of_memes.data = ""
+        form.type_of_memes.data = ""
+        form.type_of_movement.data = ""
+        form.type_of_emotions.data = ""
+        form.type_of_subject.data = ""
+
+    def get_form():
+        """
+        Get, add and commit the form input from the dashboard. Not validated yet.
+
+        :return: CategorizedPost, db object to be added
+        """ 
+
         categorized_post = Codes(
             user_id=current_user.id,
             post_id=form.post_id.data,
-            number_of_panels=form.number_of_panels.data,
-            type_of_image=form.type_of_image.data,
+            number_of_memes=form.number_of_memes.data,
+            type_of_memes=form.type_of_memes.data,
             type_of_movement=form.type_of_movement.data,
-            type_of_attribute=form.type_of_attribute.data,
             type_of_emotions=form.type_of_emotions.data,
             type_of_subject=form.type_of_subject.data,
-            text_existence=form.text_existence.data,
-            type_of_audience=form.type_of_audience.data,
         )
-        print('[+] CODES VALIDATED ') 
-        db.session.add(categorized_post)
-        db.session.commit()
+        
+        return categorized_post
+    
+    def code_exists(post_id, user_id):
+        """Returns true (and the code) if a code is found. 
 
-        flash('Post categorized successfully', 'success')
+        Args:
+            post_id (int): Post id, Posts.id or Codes.post_id
+            user_id (int): User id, Coder.id or Codes.user_id
 
-        # After submission, clear the current post ID to fetch a new random post
-        session.pop('current_post_id', None)
+        Returns:
+            post_exist: db query
+            bool: True if exists
+        """
+        try:
+            code_exist = Codes.query.filter_by(user_id=user_id, post_id = post_id).one()
+            return code_exist
+        except NoResultFound:
+            return False
+
+    def post_exists(post_id):
+        """Returns true (and the post) if a post is found. 
+
+        Args:
+            post_id (int): Post id, Posts.id or Codes.post_id
+
+        Returns:
+            bool: True if exists
+        """
+
+        try:
+            post_exist = db.session.query(Posts.id).filter_by(id=post_id).one()
+            return True
+        except NoResultFound:
+            flash('Post with such ID was not found.')
+            return False
+    
+    def show_media(post_id):
+        print(f'\n[!] Showing Media: {post_id}\n')
+        """
+        Returns media and some metadata
+
+        :post: a post record queried from Posts table as a whole
+        :return: caption, followers, likes, media_file, media_type
+        """ 
+
+        try:
+            post = Posts.query.filter_by(id=post_id).one()
+        except NoResultFound:
+            print(f'[!]No result found!')
+            post = Posts.query.filter_by(id=4737).one()
+        
+        code = code_exists(post_id, current_user.id)
+
+        if code:
+            fill_form(code=code)
+        elif not code:
+            empty_form()
+            
+        post_dir = post.local_download_directory
+        video_files = glob.glob(os.path.join(post_dir, '*.mp4'))
+        image_files = glob.glob(os.path.join(post_dir, '*.jpg')) + glob.glob(os.path.join(post_dir, '*.png'))
+        media_file = None
+        media_type = None
+        if video_files:
+            media_file = video_files[0]
+            media_type = 'video'
+        elif image_files:
+            media_file = image_files[0]
+            media_type = 'image'
+
+        media_file = media_file.split('\\')
+        media_file = media_file[8::]
+        media_file = str('assets/img/' + '/'.join(media_file))
+        form.post_id.data = post.id
+
+        likes = shorten_number(post.likes)
+        followers = shorten_number(db.session.query(Profiles.followers).filter(Profiles.id == post.profile_id).scalar())
+        caption = re.sub(r'(\r\n){2,}','\r\n', str(post.caption).strip())
+        return post, caption, followers, likes, media_file, media_type
+    
+    def next():
+        if len(session['next_posts']) == 0:
+            new_rand = Posts.query.order_by(db.func.rand()).first()
+            session['previous_posts'].append(session['current_post_id'])
+            session['current_post_id'] = new_rand.id
+
+        elif len(session['next_posts']) > 0:
+            session['previous_posts'].append(session['current_post_id'])
+            session['current_post_id'] = session['next_posts'].popleft()
+
+        return redirect(url_for('dashboard'))
+    
+    def previous():
+        if len(session['previous_posts']) == 0:
+            flash('No previous post found')
+            pass
+
+        elif len(session['previous_posts']) > 0:
+            session['next_posts'].appendleft(session['current_post_id'])
+            session['current_post_id'] = session['previous_posts'].pop()
         return redirect(url_for('dashboard'))
 
-    # Retrieve the current post ID from the session, if available
-    current_post_id = session.get('current_post_id')
-    if not current_post_id:
-        # If no current post ID in session, fetch a new random post
-        post = Posts.query.order_by(db.func.rand()).first()
-        session['current_post_id'] = post.id
+    get_post = request.args.get('postid_input')
+
+    if get_post and post_exists(get_post):
+        print('[!] Custom post selected:', get_post, file=sys.stderr)
+        session['current_post_id'] = get_post
+        return redirect(url_for('dashboard'))
     else:
-        # Otherwise, retrieve the post from the database using the session-stored ID
-        post = Posts.query.get(current_post_id)
+        pass
 
-    # Check for video and image files in the post's directory
-    post_dir = post.local_download_directory
+    if request.method == 'POST' and form.validate_on_submit() and 'next' in request.form:
+        new_code = get_form()
+        old_code = code_exists(session['current_post_id'], current_user.id)
+
+        if old_code:
+            db.session.delete(old_code)
+            db.session.add(new_code)
+            db.session.commit()
+        elif not old_code:
+            db.session.add(new_code)
+            db.session.commit()
+
+        next()
+
+
+    elif request.method == 'POST' and form.validate_on_submit() and 'previous' in request.form:
+        new_code = get_form()
+        old_code = code_exists(session['current_post_id'], current_user.id)
+
+        if old_code:
+            db.session.delete(old_code)
+            db.session.add(new_code)
+            db.session.commit()
+        elif not old_code:
+            db.session.add(new_code)
+            db.session.commit()
+
+        previous()
+
+    elif request.method == 'POST' and 'next' in request.form:
+        next()
+
+    elif request.method == 'POST' and 'previous' in request.form:
+        previous()
     
-
-    video_files = glob.glob(os.path.join(post_dir, '*.mp4'))
-    image_files = glob.glob(os.path.join(post_dir, '*.jpg')) + glob.glob(os.path.join(post_dir, '*.png'))
-
-    # Prioritize video over image
-    media_file = None
-    media_type = None
-    if video_files:
-        media_file = video_files[0]
-        media_type = 'video'
-    elif image_files:
-        media_file = image_files[0]
-        media_type = 'image'
-
-    likes = post.likes
-    followers = db.session.query(Profiles.followers).filter(Profiles.id == post.profile_id).scalar()
-
-    def shorten_number(number_to_shorten):
-        from numerize import numerize 
-        return str(numerize.numerize(number_to_shorten))
-
-    likes = shorten_number(likes)
-    followers = shorten_number(followers)
-
-    media_file = media_file.split('\\')
-    media_file = media_file[8::]
-    media_file = str('assets/img/' + '/'.join(media_file))
-    form.post_id.data = post.id
-
-
-    caption = str(post.caption).strip()
-    # caption = ''.join(caption.splitlines())
-    caption = re.sub(r'(\r\n){2,}','\r\n', caption)
-    return render_template('dashboard.html', post=post, caption = caption, followers=followers, likes=likes, form=form, media_file=media_file, media_type=media_type)
-
-@app.route('/previous', methods=['GET', 'POST'])
-@login_required
-def previous():
-    form = CategorizationForm()
-    previous_post = Codes.query.filter_by(user_id=current_user.id).order_by(Codes.id.desc()).first()
-    session['current_post_id'] = previous_post.post_id
-    form.post_id.data = previous_post.post_id
-    form.number_of_panels.data = previous_post.number_of_panels
-    form.type_of_image.data = previous_post.type_of_image
-    form.type_of_movement.data = previous_post.type_of_movement
-    form.type_of_attribute.data = previous_post.type_of_attribute
-    form.type_of_emotions.data = previous_post.type_of_emotions
-    form.type_of_subject.data = previous_post.type_of_subject
-    form.text_existence.data = previous_post.text_existence
-    form.type_of_audience.data = previous_post.type_of_audience
-    print(form.data, file=sys.stderr)
-    return redirect(url_for('dashboard'))
-
-@app.route('/next', methods=['GET', 'POST'])
-@login_required
-def next():
-    # Logic for handling next post action
-    session.pop('current_post_id', None)
-    return redirect(url_for('dashboard'))
+    
+    post, caption, followers, likes, media_file, media_type = show_media(session['current_post_id'])
+    return render_template('dashboard.html', 
+                           post=post, 
+                           caption = caption, 
+                           followers=followers, 
+                           likes=likes, 
+                           form=form, 
+                           media_file=media_file, 
+                           media_type=media_type)
 
 @app.route('/logout')
 def logout():
+    session['previous_steps'] = 0
     logout_user()
     return redirect(url_for('login'))
 
-def has_no_empty_params(rule):
-    defaults = rule.defaults if rule.defaults is not None else ()
-    arguments = rule.arguments if rule.arguments is not None else ()
-    return len(defaults) >= len(arguments)
- 
+
+@app.route('/codebook')
+def codebook():
+    return render_template('codebook.html')

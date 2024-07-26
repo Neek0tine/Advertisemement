@@ -10,14 +10,11 @@ class Codes(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('coder.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
-    number_of_panels = db.Column(db.Integer, nullable=False)
-    type_of_image = db.Column(db.Integer, nullable=False)
+    number_of_memes = db.Column(db.Integer, nullable=False)
+    type_of_memes = db.Column(db.Integer, nullable=False)
     type_of_movement = db.Column(db.Integer, nullable=False)
-    type_of_attribute = db.Column(db.Integer, nullable=False)
     type_of_emotions = db.Column(db.Integer, nullable=False)
     type_of_subject = db.Column(db.Integer, nullable=False)
-    text_existence = db.Column(db.Integer, nullable=False)
-    type_of_audience = db.Column(db.Integer, nullable=False)
 
 class Profiles(db.Model):
     __tablename__ = 'profiles'

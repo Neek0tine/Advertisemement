@@ -16,7 +16,7 @@ app.config['SESSION_TYPE'] = 'filesystem'
 
 
 db = SQLAlchemy(app)
-csrf = CSRFProtect(app)
+csrf = CSRFProtect(app) 
 login_manager = LoginManager(app)
 login_manager.init_app(app)
 login_manager.login_view = "login"
