@@ -207,6 +207,6 @@ class Instacrap:
 
 if __name__ == "__main__":
     i = Instacrap()
-    brands_list = ["lazada_id"]
+    brands_list = ["gojekindonesia"]
     for brand in brands_list:
         i.scrap(brand)

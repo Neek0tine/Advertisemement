@@ -123,3 +123,8 @@
   --bs-btn-disabled-border-color: #198754;
 }
 
+.focused {
+  background-color: rgba(5, 81, 96, 0.45);
+  border-radius: 5px;
+}
+

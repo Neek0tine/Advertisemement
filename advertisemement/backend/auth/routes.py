@@ -2,7 +2,7 @@ import glob
 import re
 import os, sys
 from . import app, db
-from sqlalchemy_views import CreateView, DropView
+from numerize import numerize 
 from .dbmodel import Coder, Codes, Posts, Profiles
 from flask import render_template, redirect, url_for, session, request, flash
 from flask_login import login_user, current_user, logout_user, login_required
@@ -10,11 +10,20 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, HiddenField, RadioField
 from wtforms.validators import InputRequired, DataRequired
 from collections import deque
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import NoResultFound, MultipleResultsFound
+
 
 def shorten_number(number_to_shorten):
-            from numerize import numerize 
-            return str(numerize.numerize(number_to_shorten))
+    """
+    Shorten number to thousands (K), Millions (M). You get the idea
+
+    Args:
+        number_to_shorten (int): The number. Ex. 21084901
+
+    Returns:
+        str: The shortened numbers. Ex. 21M
+    """
+    return str(numerize.numerize(number_to_shorten))
 
 # Forms
 class LoginForm(FlaskForm):
@@ -32,30 +41,40 @@ class CategorizationForm(FlaskForm):
 
 @app.route('/')
 def home():
+    """
+    Root address. Currently used to checks whether a user is logged in
+
+    """
+
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-
-        return redirect(url_for('dashboard'))
     form = LoginForm()
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+
     if form.validate_on_submit():
         print('[+] Form validated', file=sys.stderr)
         coder = Coder.query.filter_by(username=form.username.data).first()
         if coder:
             print("[+] Logged in successfully, user: " + str(form.username.data), file=sys.stderr)
             login_user(coder)
+            
             print(f'\n =========== [!] Relogging-in. All variables are reset. =========== ')
             session['current_post_id'] = Posts.query.order_by(db.func.rand()).first().id
             session['previous_posts'] = deque([], maxlen=25)
-            session['next_posts'] =  deque([], maxlen=25)            
+            session['next_posts'] =  deque([], maxlen=25)
+            session['custom_userprofile'] = None            
             return redirect(url_for('dashboard'))
-        # flash('Email atau Password salah, mohon periksa ulang!', 'danger')
-    print("[-] Login failed " + str(form.username.data), file=sys.stderr)
+        
+    flash('Email atau Password salah, mohon periksa ulang!', 'danger')
+    print("[-] Login failed " + str(form.username.data), form.data, file=sys.stderr)
     return render_template('login.html', form=form)
+
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
@@ -63,6 +82,14 @@ def dashboard():
     form = CategorizationForm()
     print(f'\n[+] Previously = {session["previous_posts"]} ', file=sys.stderr)
     print(f'\n[+] Next = {session["next_posts"]}', file=sys.stderr)
+
+    try:
+        print(f'\n[+] Brand = {session["custom_userprofile"]}', file=sys.stderr)
+    except KeyError:
+        print(f'\n[+] No brand selected', file=sys.stderr)
+
+
+
 
     def fill_form(code):
         """
@@ -106,7 +133,7 @@ def dashboard():
         )
         
         return categorized_post
-    
+
     def code_exists(post_id, user_id):
         """Returns true (and the code) if a code is found. 
 
@@ -123,6 +150,11 @@ def dashboard():
             return code_exist
         except NoResultFound:
             return False
+        except MultipleResultsFound:
+            latest_code = Codes.query.filter_by(user_id=user_id, post_id = post_id).first()
+            db.session.delete(latest_code)
+            code_exists(post_id=post_id, user_id=user_id)
+        
 
     def post_exists(post_id):
         """Returns true (and the post) if a post is found. 
@@ -186,16 +218,36 @@ def dashboard():
         return post, caption, followers, likes, media_file, media_type
     
     def next():
-        if len(session['next_posts']) == 0:
-            new_rand = Posts.query.order_by(db.func.rand()).first()
-            session['previous_posts'].append(session['current_post_id'])
-            session['current_post_id'] = new_rand.id
 
-        elif len(session['next_posts']) > 0:
-            session['previous_posts'].append(session['current_post_id'])
-            session['current_post_id'] = session['next_posts'].popleft()
+        try:
+            print('[+] Custom user selected:',session['custom_userprofile'], file=sys.stderr)
+            if len(session['next_posts']) == 0:
+                # new_rand = Posts.query.filter_by(username=session["custom_userprofile"]).order_by(db.func.rand()).first()
+                new_rand = (db.session.query(Posts.id)
+                .outerjoin(Codes, Posts.id == Codes.post_id)
+                .filter(Codes.post_id == None, Posts.username == session["custom_userprofile"])
+                .order_by(db.func.random())
+                .first())
 
-        return redirect(url_for('dashboard'))
+                session['previous_posts'].append(session['current_post_id'])
+                session['current_post_id'] = new_rand.id
+
+            elif len(session['next_posts']) > 0:
+                session['previous_posts'].append(session['current_post_id'])
+                session['current_post_id'] = session['next_posts'].popleft()
+        except KeyError:
+            if len(session['next_posts']) == 0:
+                new_rand = Posts.query.order_by(db.func.rand()).first()
+                session['previous_posts'].append(session['current_post_id'])
+                session['current_post_id'] = new_rand.id
+
+            elif len(session['next_posts']) > 0:
+                session['previous_posts'].append(session['current_post_id'])
+                session['current_post_id'] = session['next_posts'].popleft()
+                
+        
+
+            return redirect(url_for('dashboard'))
     
     def previous():
         if len(session['previous_posts']) == 0:
@@ -206,6 +258,17 @@ def dashboard():
             session['next_posts'].appendleft(session['current_post_id'])
             session['current_post_id'] = session['previous_posts'].pop()
         return redirect(url_for('dashboard'))
+
+    set_user = request.args.get('userid_input')
+
+    if set_user:
+        print('[!] Custom user selected:', set_user, file=sys.stderr)
+        session['custom_userprofile'] = set_user
+        next()
+    elif set_user == '':
+        print('[!] Custom user selected reset', file=sys.stderr)
+        session.pop('custom_userprofile', None)
+        next()
 
     get_post = request.args.get('postid_input')
 

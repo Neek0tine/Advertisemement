@@ -42,13 +42,11 @@
                     <div class="row">
                         <div class="col d-grid" style="height: 100%;">
                             <div>
-                                <form id="login-1" method="post">{{ form.csrf_token }}<input class="form-control login" type="text" id="username-1" style="height: 47px;" placeholder="Coder name" name="username"></form>
+                                <form id="login" method="post">{{ form.csrf_token }}<input class="form-control login" type="text" id="username" style="height: 47px;" placeholder="Coder name" name="username">
+                                    <div class="col d-grid" style="margin-top: 17px;"><button class="btn btn-primary border rounded" data-bss-hover-animate="pulse" id="submit" type="submit" style="background: var(--bs-form-valid-border-color);border-style: solid;border-color: rgb(75,255,12);font-size: 22px;font-family: arial;font-weight: bold;" name="submit">Coder Login</button></div>
+                                </form>
                             </div>
                         </div>
-                        <div class="col d-grid"><button class="btn btn-primary" data-bss-hover-animate="pulse" id="submit-1" type="button" style="background: var(--bs-form-valid-border-color);border-style: solid;border-color: rgb(75,255,12);font-size: 22px;font-family: arial;font-weight: bold;" name="submit">Coder Login</button></div>
-                    </div>
-                    <div class="row d-grid" style="margin-top: 12px;">
-                        <div class="col d-grid"><button class="btn btn-primary" data-bss-hover-animate="pulse" type="button" style="background: var(--bs-orange);border-style: solid;border-color: var(--bs-yellow);font-size: 22px;font-family: arial;font-weight: bold;">About</button></div>
                     </div>
                 </div>
             </div>
@@ -61,7 +59,7 @@
     <script src="https://vjs.zencdn.net/8.10.0/video.min.js" type="module"></script>
     <script src="/assets/js/bootstrap/js/bootstrap.min.js"></script>
     <script src="/assets/js/js/bs-init.js"></script>
-    <script src="/assets/js/js/selection_restrict.js"></script>
+    <script src="/assets/js/js/form_dashboard.js"></script>
 </body>
 
 </html>
