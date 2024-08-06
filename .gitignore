@@ -2,6 +2,7 @@
 .ads
 scraps/
 advertisemement/frontend/templates/assets/img
+flask_session/
 
 *.session.sql
 # Byte-compiled / optimized / DLL files
