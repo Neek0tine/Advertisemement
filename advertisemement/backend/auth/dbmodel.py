@@ -8,8 +8,8 @@ class Coder(UserMixin, db.Model):
 
 class Codes(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('coder.id'), nullable=False)
-    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('coder.id'), nullable=False, unique=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False, unique=True)
     number_of_memes = db.Column(db.Integer, nullable=False)
     type_of_memes = db.Column(db.Integer, nullable=False)
     type_of_movement = db.Column(db.Integer, nullable=False)
@@ -34,6 +34,7 @@ class Posts(db.Model):
     profile_id = db.Column(db.Integer, db.ForeignKey('profiles.id'), nullable=False)
     post_url = db.Column(db.String(255), nullable=True)
     caption = db.Column(db.Text, nullable=True)
+    comments = db.Column(db.Integer, nullable=True)
     likes = db.Column(db.Integer, nullable=True)
     date_posted = db.Column(db.DateTime, nullable=True)
     engagement = db.Column(db.Float, nullable=True)

@@ -6,9 +6,9 @@ from flask_login import LoginManager
 from flask_session import Session
 from .config import Config
 
-template_dir = os.path.abspath('advertisemement/frontend/templates')
-static_dir = os.path.abspath('advertisemement/frontend/templates/assets')
-serve_folder = 'advertisemement/frontend/templates/scraps'
+template_dir = os.path.abspath('frontend/templates')
+static_dir = os.path.abspath('frontend/templates/assets')
+serve_folder = 'frontend/templates/scraps'
 
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.config.from_object(Config)

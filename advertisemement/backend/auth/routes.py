@@ -10,6 +10,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, HiddenField, RadioField
 from wtforms.validators import InputRequired, DataRequired
 from collections import deque
+import jsonify
 from sqlalchemy.exc import NoResultFound, MultipleResultsFound
 
 
@@ -68,10 +69,10 @@ def login():
             session['current_post_id'] = Posts.query.order_by(db.func.rand()).first().id
             session['previous_posts'] = deque([], maxlen=25)
             session['next_posts'] =  deque([], maxlen=25)
-            session['custom_userprofile'] = None            
+            session['custom_userprofile'] = None    
             return redirect(url_for('dashboard'))
         
-    flash('Email atau Password salah, mohon periksa ulang!', 'danger')
+    # flash('Email atau Password salah, mohon periksa ulang!', 'danger')
     print("[-] Login failed " + str(form.username.data), form.data, file=sys.stderr)
     return render_template('login.html', form=form)
 
@@ -189,6 +190,7 @@ def dashboard():
             post = Posts.query.filter_by(id=4737).one()
         
         code = code_exists(post_id, current_user.id)
+        print(f'\n[!] Code exist! Media: {post_id}\n')
 
         if code:
             fill_form(code=code)
@@ -196,20 +198,37 @@ def dashboard():
             empty_form()
             
         post_dir = post.local_download_directory
+
+        # // a hack, change directory //
+        
+        post_dir = (post_dir.split('\\'))[8::]
+        post_dir = str('C:/Users/nicho/Documents/Thesis/Advertisemement/advertisemement/frontend/templates/assets/img/' + '/'.join(post_dir))
+        # print(post_dir)
+
         video_files = glob.glob(os.path.join(post_dir, '*.mp4'))
+        # print(video_files)
         image_files = glob.glob(os.path.join(post_dir, '*.jpg')) + glob.glob(os.path.join(post_dir, '*.png'))
+        # print(image_files)
+
         media_file = None
         media_type = None
+
         if video_files:
             media_file = video_files[0]
             media_type = 'video'
+        
         elif image_files:
             media_file = image_files[0]
             media_type = 'image'
 
-        media_file = media_file.split('\\')
-        media_file = media_file[8::]
-        media_file = str('assets/img/' + '/'.join(media_file))
+        
+        media_file = media_file.split('/')
+        media_file = media_file[9::]
+        print(media_file)
+        media_file = str('/'.join(media_file))
+        
+        # media_file = str(post_dir + '/' + media_file)
+        
         form.post_id.data = post.id
 
         likes = shorten_number(post.likes)
@@ -222,19 +241,72 @@ def dashboard():
         try:
             print('[+] Custom user selected:',session['custom_userprofile'], file=sys.stderr)
             if len(session['next_posts']) == 0:
-                # new_rand = Posts.query.filter_by(username=session["custom_userprofile"]).order_by(db.func.rand()).first()
-                new_rand = (db.session.query(Posts.id)
-                .outerjoin(Codes, Posts.id == Codes.post_id)
-                .filter(Codes.post_id == None, Posts.username == session["custom_userprofile"])
-                .order_by(db.func.random())
-                .first())
 
-                session['previous_posts'].append(session['current_post_id'])
-                session['current_post_id'] = new_rand.id
+                # new_rand = Posts.query.filter_by(username=session["custom_userprofile"]).order_by(db.func.rand()).first()
+                if current_user.username == 'neeko':
+                    if session['custom_userprofile'] is None:
+                        new_rand = (db.session.query(Posts.id)
+                        .outerjoin(Codes, Posts.id == Codes.post_id)
+                        .filter(Codes.post_id == None)
+                        .order_by(db.func.random())
+                        .first())
+
+                    elif session['custom_userprofile'] is not None:
+                        new_rand = (db.session.query(Posts.id)
+                        .outerjoin(Codes, Posts.id == Codes.post_id)
+                        .filter(Codes.post_id == None, Posts.username == session["custom_userprofile"])
+                        .order_by(db.func.random())
+                        .first())
+
+                elif current_user.username == 'preview':
+
+                    if session['custom_userprofile'] is None:
+                        new_rand = (
+                            db.session.query(Posts.id)
+                            .order_by(db.func.random())
+                            .first()
+                        )
+                    elif session['custom_userprofile'] is not None:
+                        new_rand = (
+                            db.session.query(Posts.id)
+                            .filter(Posts.username == session["custom_userprofile"])
+                            .order_by(db.func.random())
+                            .first()
+                        )
+                        print(new_rand)
+
+                elif current_user.username != 'neeko':
+
+                    if session['custom_userprofile'] is None:
+                        new_rand = (
+                            db.session.query(Posts.id)
+                            .join(Codes, Posts.id == Codes.post_id)
+                            .filter(Codes.user_id == 1)
+                            .order_by(db.func.random())
+                            .all()
+                        )
+
+                    elif session['custom_userprofile'] is not None:
+                        new_rand = (
+                            db.session.query(Posts.id)
+                            .join(Codes, Posts.id == Codes.post_id)
+                            .filter(Codes.user_id == 1, Posts.username == session["custom_userprofile"])
+                            .order_by(db.func.random())
+                            .all()
+                        )
+                
+                try:
+                    session['previous_posts'].append(session['current_post_id'])
+                    session['current_post_id'] = new_rand.id
+                except:
+                    print('[!] All posts has been coded!')      
+                    render_template('thankyou.html')
+
 
             elif len(session['next_posts']) > 0:
                 session['previous_posts'].append(session['current_post_id'])
                 session['current_post_id'] = session['next_posts'].popleft()
+
         except KeyError:
             if len(session['next_posts']) == 0:
                 new_rand = Posts.query.order_by(db.func.rand()).first()
@@ -285,8 +357,10 @@ def dashboard():
 
         if old_code:
             db.session.delete(old_code)
+            db.session.commit()
             db.session.add(new_code)
             db.session.commit()
+            
         elif not old_code:
             db.session.add(new_code)
             db.session.commit()

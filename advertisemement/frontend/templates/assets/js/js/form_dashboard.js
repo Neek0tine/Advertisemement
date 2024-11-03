@@ -88,8 +88,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const nextButton = document.querySelector('button[name="next"]');
     const previousButton = document.querySelector('button[name="previous"]');
     const contentVideo = document.getElementById('contentVideo');
-    const postIdInput = document.querySelector('input[name="postid_input"]');
-    const userIdInput = document.querySelector('input[name="userid_input"]');
 
     numMemes.forEach((radio) => {
         radio.addEventListener('change', function () {
@@ -120,20 +118,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            contentVideo.requestFullscreen().catch(err => {
-                alert(`Error attempting to enable fullscreen mode: ${err.message} (${err.name})`);
-            });
-        } else {
-            document.exitFullscreen();
-        }
-    }
-
     document.addEventListener('keydown', function (event) {
         if (event.ctrlKey || event.altKey || event.metaKey) return;
-
-        const activeElement = document.activeElement;
 
         switch (event.key) {
             case 'ArrowUp':
@@ -152,6 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 event.preventDefault();
                 selectNextRadio();
                 break;
+
             case 'Enter':
                 if (activeElement === postIdInput) {
                     event.preventDefault();
@@ -167,6 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     nextButton.click();
                 }
                 break;
+
             case ' ':
                 event.preventDefault();
                 if (event.shiftKey) {
@@ -187,15 +175,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
                 break;
-            case 'f':
-                event.preventDefault();
-                toggleFullscreen();
-                break;
             default:
                 break;
         }
     });
 
     highlightFocusedGroup(); // Initial highlight
-    blockTypeOfMemes(); // Initial block
 });

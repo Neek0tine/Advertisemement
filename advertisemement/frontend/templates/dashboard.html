@@ -29,26 +29,25 @@
   rel="stylesheet"
 />
 </head>
-
 <body id="page-top" style="background:rgb(11,15,25);backdrop-filter:opacity(1) brightness(100%);overflow:visible;height:auto;">
     <div class="d-flex justify-content-evenly align-items-center" id="homeContainer-1" style="height: 1153px;color: rgb(11,15,25);">
         <div class="col-12 col-md-12" id="coderForm" style="background: rgba(18,18,20,0);padding: 0px;border-radius: 15px;overflow: visible;border-width: 0.5px;border-color: var(--bs-body-bg);width: 1920px;">
             <div class="container">
                 <div class="row" style="width:1320px;"><div>
-  {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-            {% if category == 'message' %}
-              <div class="alert alert-danger" role="alert">
-            {% else %}
-              <div class="alert alert-{{ category }}" role="alert">
-            {% endif %}
-              {{ message }}
-            </div>
-        {% endfor %}
-      {% endif %}
-  {% endwith %}
-</div>
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                {% if category == 'message' %}
+                                <div class="alert alert-danger" role="alert">
+                                {% else %}
+                                <div class="alert alert-{{ category }}" role="alert">
+                                {% endif %}
+                                {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                </div>
                     <div class="col-lg-3 col-xxl-2 d-flex align-items-center" style="padding-right:0px;padding-left:0px;"><span> {% if current_user.is_authenticated %} </span><a class="btn btn-sm btn-login" role="button" style="font-size:15px;border-radius:0px;" href="{{ url_for('logout') }}"><strong>Logged in&nbsp;</strong></a><button class="btn btn-outline-success btn-sm" type="button" style="font-size:15px;border-radius:0px;pointer-events:none;"><span style="color: #ffffff;background-color: rgb(31, 31, 31);font-weight: bold;">{{current_user.username}}</span></button><span> {% endif %} </span></div>
                     <div class="col-xxl-2 d-grid col-xxl-auto"><button class="btn btn-outline-light btn-sm" type="button" style="font-size:15px;"><strong>@{{ post.username }}</strong></button>
                         <div class="row">
