@@ -16,12 +16,6 @@
 # Advertisemement: The Digital Codebook
 Adveritsemement (diambil dari penggabungan kata <i>Advertisement</i> dan <i>Meme</i>) adalah aplikasi berbasis web yang ditujukan sebagai _codebook_ digital untuk memudahkan proses pengodingan (_labelling_) konten multimedia dari sosial media Instagram. Berbeda dari cara knovensional yang menggunakan formulir koding yang berbentuk dokumen atau _spreadsheet_, Advertisemement mengintegrasikan basis data tempat penyimpanan data koding dengan sumber konten secara langsung di satu tempat. Selain sebagai pendukung kenyamanan dan kecepatan dalam proses koding, pembuatan aplikasi web juga membolehkan lebih dari satu koder untuk bekerja bersamaan di konten yang sama, memudahkan perhitungan Kappa yang alhasil akan memberikan hasil koding yang objektif dan akurat. 
 
-<!-- GETTING STARTED -->
-# Installation and Usage
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
 # Screenshots
 <div align="center">
   <a href="https://github.com/neek0tine/advertisemement">
@@ -41,6 +35,11 @@ To get a local copy up and running follow these simple example steps.
   </a>
 </div>
 <br>
+<!-- GETTING STARTED -->
+# Installation and Usage
+
+This is an example of how you may give instructions on setting up your project locally.
+To get a local copy up and running follow these simple example steps.
 
 ## Prerequisites
 
