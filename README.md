@@ -6,7 +6,7 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
-![GitHub commit activity](https://img.shields.io/github/commit-activity/w/neek0tine/Advertisemement) ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/neek0tine/Advertisemement) ![GitHub License](https://img.shields.io/github/license/neek0tine/adveritsemement) ![Maintenance](https://img.shields.io/maintenance/yes/2024)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/w/neek0tine/Advertisemement) ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/neek0tine/Advertisemement) ![GitHub License](https://img.shields.io/github/license/neek0tine/advertisemement) ![Maintenance](https://img.shields.io/maintenance/yes/2024)
 <div align="center">
   <a href="https://github.com/neek0tine/advertisemement">
     <img src="https://github.com/Neek0tine/Advertisemement/blob/main/graphics/banner-01.png" alt="Logo">
